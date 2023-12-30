@@ -2,7 +2,20 @@
 #include <TFT_eSPI.h>
 #include "ui.h"
 #include "lvgl_scr_mgr.h"
+#include <TouchDrvCSTXXX.hpp>
 // #include <lv_demos.h>
+
+#define BOARD_I2C_SDA       5
+#define BOARD_I2C_SCL       6
+#define BOARD_TOUCH_RST     15
+#define BOARD_TOUCH_IRQ     7
+
+#define SCR_ROTATION_0   0
+#define SCR_ROTATION_90  1
+#define SCR_ROTATION_180 2
+#define SCR_ROTATION_270 3
+
+int ui_rotation;
 
 static const uint16_t screenWidth = 160;
 static const uint16_t screenHeight = 160;
@@ -10,6 +23,7 @@ static const uint16_t screenHeight = 160;
 static lv_disp_draw_buf_t draw_buf;
 static lv_color_t buf[screenWidth * 10];
 TFT_eSPI tft = TFT_eSPI(screenWidth, screenHeight); /* TFT instance */
+TouchDrvCSTXXX touch;
 
 /* Display flushing */
 void my_disp_flush(lv_disp_drv_t *disp, const lv_area_t *area, lv_color_t *color_p)
@@ -25,9 +39,41 @@ void my_disp_flush(lv_disp_drv_t *disp, const lv_area_t *area, lv_color_t *color
   lv_disp_flush_ready(disp);
 }
 
+static void lv_touchpad_read(lv_indev_drv_t *indev_driver, lv_indev_data_t *data)
+{
+    static int16_t x[5], y[5];
+    uint8_t touched = touch.getPoint(x, y, touch.getSupportTouchPoint());
+    if (touched) {
+        data->state = LV_INDEV_STATE_PR;
+        if(ui_rotation == SCR_ROTATION_0){
+            data->point.x = x[0];
+            data->point.y = y[0];
+        } 
+        else if(ui_rotation == SCR_ROTATION_90){
+            data->point.x = y[0];
+            data->point.y = TFT_WIDTH - x[0];
+        }
+        else if(ui_rotation == SCR_ROTATION_180){
+            data->point.x = TFT_WIDTH - x[0];
+            data->point.y = TFT_HEIGHT - y[0];
+        }
+        else if(ui_rotation == SCR_ROTATION_270) {
+            data->point.x = TFT_HEIGHT - y[0];
+            data->point.y = x[0];
+        }
+        Serial.print("x=");Serial.print(data->point.x);
+        Serial.print(", y=");Serial.println(data->point.y);
+    } else {
+        data->state = LV_INDEV_STATE_REL;
+    }
+}
+
 void setup()
 {
+  
   Serial.begin(115200);
+
+  delay(3000);
 
   String LVGL_Arduino = "Hello Arduino! ";
   LVGL_Arduino += String('V') + lv_version_major() + "." + lv_version_minor() + "." + lv_version_patch();
@@ -36,9 +82,17 @@ void setup()
   printf("I am LVGL_Arduino");
 
   tft.begin();        /* TFT init */
-  tft.setRotation(0); /* Landscape orientation, flipped */
-  tft.setSwapBytes(false);
+  // tft.setRotation(0); /* Landscape orientation, flipped */
+  // tft.setSwapBytes(false);
   // tft.fillScreen(TFT_WHITE); 
+
+  touch.setPins(BOARD_TOUCH_RST, BOARD_TOUCH_IRQ);
+  bool hasTouch = touch.init(Wire, BOARD_I2C_SDA, BOARD_I2C_SCL, 0x15);
+  if (!hasTouch) {
+      Serial.println("Failed to find Capacitive Touch !");
+  } else {
+      Serial.println("Find Capacitive Touch");
+  }
 
   lv_init();
 
@@ -52,6 +106,12 @@ void setup()
   disp_drv.flush_cb = my_disp_flush;
   disp_drv.draw_buf = &draw_buf;
   lv_disp_drv_register(&disp_drv);
+
+  static lv_indev_drv_t indev_drv;
+  lv_indev_drv_init(&indev_drv);
+  indev_drv.type = LV_INDEV_TYPE_POINTER;
+  indev_drv.read_cb = lv_touchpad_read;
+  lv_indev_drv_register(&indev_drv);
 
   ui_entry();
 }
