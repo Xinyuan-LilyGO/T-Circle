@@ -862,7 +862,7 @@ void TFT_eSPI::setRotation(uint8_t m)
      #include "TFT_Drivers/GC9A01_Rotation.h"
 
 #elif defined (GC9D01N_DRIVER)
-     #include "TFT_Drivers/GC9A01_Rotation.h"
+     #include "TFT_Drivers/GC9D01N_Rotation.h"
 
 #elif defined (ILI9225_DRIVER)
      #include "TFT_Drivers/ILI9225_Rotation.h"
