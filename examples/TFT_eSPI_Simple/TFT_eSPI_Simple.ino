@@ -46,8 +46,8 @@ static void lv_touchpad_read(lv_indev_drv_t *indev_driver, lv_indev_data_t *data
     if (touched) {
         data->state = LV_INDEV_STATE_PR;
         if(ui_rotation == SCR_ROTATION_0){
-            data->point.x = x[0];
-            data->point.y = y[0];
+            data->point.x = lv_map(x[0], 0, 350, 0, 160);
+            data->point.y = lv_map(y[0], 0, 350, 0, 160);
         } 
         else if(ui_rotation == SCR_ROTATION_90){
             data->point.x = y[0];
@@ -120,20 +120,20 @@ unsigned long previousMillis = 0;
 int scr_id = 0;
 void loop()
 {
-  unsigned long currentMillis = millis();  
+  // unsigned long currentMillis = millis();  
 
-  if (currentMillis - previousMillis >= 3000) {
+  // if (currentMillis - previousMillis >= 3000) {
     
-    switch (scr_id) {
-      case scr_mgr_id_main: ScrMgrPopToRoot(true);  scr_id = 1; break;
-      case scr_mgr_id_clock1: ScrMgrPushScr(scr_mgr_id_clock1, true); scr_id = 2; break;
-      case scr_mgr_id_clock2: ScrMgrPushScr(scr_mgr_id_clock2, true); scr_id = 0; break;
+  //   switch (scr_id) {
+  //     case scr_mgr_id_main: ScrMgrPopToRoot(true);  scr_id = 1; break;
+  //     case scr_mgr_id_clock1: ScrMgrPushScr(scr_mgr_id_clock1, true); scr_id = 2; break;
+  //     case scr_mgr_id_clock2: ScrMgrPushScr(scr_mgr_id_clock2, true); scr_id = 0; break;
       
-      default:
-        break;
-    }
-    previousMillis = currentMillis;  //更新时间记录
-  }
+  //     default:
+  //       break;
+  //   }
+  //   previousMillis = currentMillis;  //更新时间记录
+  // }
   lv_timer_handler(); /* let the GUI do its work */
   delay(5);
 }

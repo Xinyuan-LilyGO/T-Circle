@@ -211,20 +211,147 @@ static void btn_event_cb(lv_event_t * e)
 
 void ui_btn(void)
 {
+    /*Init the style for the default state*/
+    static lv_style_t style;
+    lv_style_init(&style);
+
+    lv_style_set_radius(&style, LV_RADIUS_CIRCLE);
+
+    lv_style_set_bg_opa(&style, LV_OPA_100);
+    lv_style_set_bg_color(&style, lv_palette_main(LV_PALETTE_BLUE));
+    lv_style_set_bg_grad_color(&style, lv_palette_darken(LV_PALETTE_BLUE, 2));
+    lv_style_set_bg_grad_dir(&style, LV_GRAD_DIR_VER);
+
+    lv_style_set_border_opa(&style, LV_OPA_40);
+    lv_style_set_border_width(&style, 2);
+    lv_style_set_border_color(&style, lv_palette_main(LV_PALETTE_GREY));
+
+    lv_style_set_shadow_width(&style, 8);
+    lv_style_set_shadow_color(&style, lv_palette_main(LV_PALETTE_GREY));
+    lv_style_set_shadow_ofs_y(&style, 8);
+
+    lv_style_set_outline_opa(&style, LV_OPA_COVER);
+    lv_style_set_outline_color(&style, lv_palette_main(LV_PALETTE_BLUE));
+
+    lv_style_set_text_color(&style, lv_color_white());
+    lv_style_set_pad_all(&style, 10);
+
+    /*Init the pressed style*/
+    static lv_style_t style_pr;
+    lv_style_init(&style_pr);
+
+    /*Add a large outline when pressed*/
+    lv_style_set_outline_width(&style_pr, 30);
+    lv_style_set_outline_opa(&style_pr, LV_OPA_TRANSP);
+
+    lv_style_set_translate_y(&style_pr, 5);
+    lv_style_set_shadow_ofs_y(&style_pr, 3);
+    lv_style_set_bg_color(&style_pr, lv_palette_darken(LV_PALETTE_BLUE, 2));
+    lv_style_set_bg_grad_color(&style_pr, lv_palette_darken(LV_PALETTE_BLUE, 4));
+
+    /*Add a transition to the outline*/
+    static lv_style_transition_dsc_t trans;
+    static lv_style_prop_t props[] = {LV_STYLE_OUTLINE_WIDTH, LV_STYLE_OUTLINE_OPA, LV_STYLE_PROP_INV};
+    lv_style_transition_dsc_init(&trans, props, lv_anim_path_linear, 300, 0, NULL);
+
+    lv_style_set_transition(&style_pr, &trans);
+
     lv_obj_t * btn = lv_btn_create(lv_scr_act());     /*Add a button the current screen*/
-    lv_obj_set_pos(btn, 10, 10);                            /*Set its position*/
-    lv_obj_set_size(btn, 120, 50);                          /*Set its size*/
+    // lv_obj_set_size(btn, 100, 100);                          /*Set its size*/
+    lv_obj_remove_style_all(btn);                          /*Remove the style coming from the theme*/
+    lv_obj_add_style(btn, &style, 0);
+    lv_obj_add_style(btn, &style_pr, LV_STATE_PRESSED);
+
+    lv_obj_set_size(btn, 100, 100);
+    // lv_obj_set_style_radius(btn, LV_RADIUS_CIRCLE, 0);
+    lv_obj_center(btn);
     // lv_obj_add_event_cb(btn, btn_event_cb, LV_EVENT_ALL, NULL);           /*Assign a callback to the button*/
 
     lv_obj_t * label = lv_label_create(btn);          /*Add a label to the button*/
-    lv_label_set_text(label, "Button");                     /*Set the labels text*/
+    lv_label_set_text(label, "Btn");                     /*Set the labels text*/
     lv_obj_center(label);
+}
+
+
+static void scroll_event_cb(lv_event_t * e)
+{
+    lv_obj_t * cont = lv_event_get_target(e);
+
+    lv_area_t cont_a;
+    lv_obj_get_coords(cont, &cont_a);
+    lv_coord_t cont_y_center = cont_a.y1 + lv_area_get_height(&cont_a) / 2;
+
+    lv_coord_t r = lv_obj_get_height(cont) * 7 / 10;
+    uint32_t i;
+    uint32_t child_cnt = lv_obj_get_child_cnt(cont);
+    for(i = 0; i < child_cnt; i++) {
+        lv_obj_t * child = lv_obj_get_child(cont, i);
+        lv_area_t child_a;
+        lv_obj_get_coords(child, &child_a);
+
+        lv_coord_t child_y_center = child_a.y1 + lv_area_get_height(&child_a) / 2;
+
+        lv_coord_t diff_y = child_y_center - cont_y_center;
+        diff_y = LV_ABS(diff_y);
+
+        /*Get the x of diff_y on a circle.*/
+        lv_coord_t x;
+        /*If diff_y is out of the circle use the last point of the circle (the radius)*/
+        if(diff_y >= r) {
+            x = r;
+        }
+        else {
+            /*Use Pythagoras theorem to get x from radius and y*/
+            uint32_t x_sqr = r * r - diff_y * diff_y;
+            lv_sqrt_res_t res;
+            lv_sqrt(x_sqr, &res, 0x8000);   /*Use lvgl's built in sqrt root function*/
+            x = r - res.i;
+        }
+
+        /*Translate the item by the calculated X coordinate*/
+        lv_obj_set_style_translate_x(child, x, 0);
+
+        /*Use some opacity with larger translations*/
+    }
+}
+
+/**
+ * Translate the object as they scroll
+ */
+void lv_scroll_6(void)
+{
+    lv_obj_t * cont = lv_obj_create(lv_scr_act());
+    lv_obj_set_size(cont, 160, 160);
+    lv_obj_center(cont);
+    lv_obj_set_flex_flow(cont, LV_FLEX_FLOW_COLUMN);
+    lv_obj_add_event_cb(cont, scroll_event_cb, LV_EVENT_SCROLL, NULL);
+    lv_obj_set_style_radius(cont, LV_RADIUS_CIRCLE, 0);
+    lv_obj_set_style_clip_corner(cont, true, 0);
+    lv_obj_set_scroll_dir(cont, LV_DIR_VER);
+    lv_obj_set_scroll_snap_y(cont, LV_SCROLL_SNAP_CENTER);
+    lv_obj_set_scrollbar_mode(cont, LV_SCROLLBAR_MODE_OFF);
+
+    uint32_t i;
+    for(i = 0; i < 20; i++) {
+        lv_obj_t * btn = lv_btn_create(cont);
+        lv_obj_set_width(btn, lv_pct(100));
+
+        lv_obj_t * label = lv_label_create(btn);
+        lv_label_set_text_fmt(label, "Button %"LV_PRIu32, i);
+    }
+
+    /*Update the buttons position manually for first*/
+    lv_event_send(cont, LV_EVENT_SCROLL, NULL);
+
+    /*Be sure the fist button is in the middle*/
+    lv_obj_scroll_to_view(lv_obj_get_child(cont, 0), LV_ANIM_OFF);
 }
 
 void ui_entry(void)
 {
 
     // ui_btn();
-    ScrMgrInit();
-    ScrMgrSwitchScr(scr_mgr_id_main, true);
+    lv_scroll_6();
+    // ScrMgrInit();
+    // ScrMgrSwitchScr(scr_mgr_id_main, true);
 }
