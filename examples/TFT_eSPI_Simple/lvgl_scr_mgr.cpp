@@ -32,6 +32,8 @@ static const SCR_MGR_SCR_HANDLE_T    *ScrMgrScrHandles[] = {
        &gui_main,
        &gui_clock1,
        &gui_clock2,
+       &gui_btn,
+       &gui_scroll,
 };
 
 /*********************************************************************************

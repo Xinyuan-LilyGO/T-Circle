@@ -21,10 +21,10 @@
 
 #define SCR_MGR_REG(handle)
 
-#define SCR_MGR_SCR_TRANS_ANIM_INT 500
+#define SCR_MGR_SCR_TRANS_ANIM_INT 300
 #define SCR_MSG_SCR_SWITCH_ANIM LV_SCR_LOAD_ANIM_NONE
-#define SCR_MSG_SCR_PUSH_ANIM LV_SCR_LOAD_ANIM_MOVE_TOP
-#define SCR_MSG_SCR_POP_ANIM LV_SCR_LOAD_ANIM_MOVE_TOP
+#define SCR_MSG_SCR_PUSH_ANIM LV_SCR_LOAD_ANIM_MOVE_LEFT
+#define SCR_MSG_SCR_POP_ANIM LV_SCR_LOAD_ANIM_MOVE_RIGHT
 
 /*********************************************************************************
  *                                   MACROS
@@ -74,12 +74,16 @@ enum
     scr_mgr_id_main = 0,
     scr_mgr_id_clock1,
     scr_mgr_id_clock2,
+    scr_mgr_id_btn,
+    scr_mgr_id_scroll,
     scr_mgr_id_max,
 };
 
 extern const SCR_MGR_SCR_HANDLE_T gui_main;
 extern const SCR_MGR_SCR_HANDLE_T gui_clock1;
 extern const SCR_MGR_SCR_HANDLE_T gui_clock2;
+extern const SCR_MGR_SCR_HANDLE_T gui_btn;
+extern const SCR_MGR_SCR_HANDLE_T gui_scroll;
 
 //
 #define ScrRegister(name, id)                 \

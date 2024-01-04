@@ -11,8 +11,6 @@ int ui_rotation = SCR_ROTATION_0;
 static const uint16_t screenWidth = 160;
 static const uint16_t screenHeight = 160;
 
-static lv_disp_draw_buf_t draw_buf;
-static lv_color_t buf[screenWidth * 10];
 TFT_eSPI tft = TFT_eSPI(screenWidth, screenHeight); /* TFT instance */
 TouchDrvCSTXXX touch;
 
@@ -96,7 +94,11 @@ void setup()
 
   lv_init();
 
-  lv_disp_draw_buf_init(&draw_buf, buf, NULL, screenWidth * 10);
+  static lv_disp_draw_buf_t draw_buf;
+  static lv_color_t buf1[screenWidth * screenHeight];
+  static lv_color_t buf2[screenWidth * screenHeight];
+
+  lv_disp_draw_buf_init(&draw_buf, buf1, buf2, screenWidth * screenHeight);
   /*Initialize the display*/
   static lv_disp_drv_t disp_drv;
   lv_disp_drv_init(&disp_drv);

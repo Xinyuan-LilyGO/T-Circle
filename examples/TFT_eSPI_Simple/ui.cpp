@@ -191,10 +191,9 @@ void gui_clock2Exit() {}
 void gui_clock2Destory() {lv_anim_del_all();}
 
 ScrRegister(clock2, scr_mgr_id_clock2);
+//------------------------------------------------------------------------------
+lv_obj_t * btn_scr;
 
-/**
- * A clock from a meter
- */
 extern void touch_sleep(void);
 extern void touch_wakeup(void);
 
@@ -231,17 +230,19 @@ static void btn_event_cb(lv_event_t * e)
         lv_obj_t * label = lv_obj_get_child(btn, 0);
         lv_label_set_text_fmt(label, "Btn: %d", cnt);
         // touch_sleep();
-        if(!flag){
-            lv_timer_create(touch_text_timer, 1000, NULL);
-            flag = true;
-        }
-        
+        // if(!flag){
+        //     lv_timer_create(touch_text_timer, 1000, NULL);
+        //     flag = true;
+        // }
     }
 }
 
-void ui_btn(void)
+lv_obj_t *gui_btnCreate(lv_obj_t *parent)
 {
     /*Init the style for the default state*/
+    btn_scr = lv_obj_create(parent);
+    lv_obj_set_size(btn_scr, lv_pct(100), lv_pct(100));
+
     static lv_style_t style;
     lv_style_init(&style);
 
@@ -286,22 +287,33 @@ void ui_btn(void)
 
     lv_style_set_transition(&style_pr, &trans);
 
-    lv_obj_t * btn = lv_btn_create(lv_scr_act());     /*Add a button the current screen*/
+    lv_obj_t * btn = lv_btn_create(btn_scr);     /*Add a button the current screen*/
     // lv_obj_set_size(btn, 100, 100);                          /*Set its size*/
     lv_obj_remove_style_all(btn);                          /*Remove the style coming from the theme*/
     lv_obj_add_style(btn, &style, 0);
     lv_obj_add_style(btn, &style_pr, LV_STATE_PRESSED);
 
     lv_obj_set_size(btn, 100, 100);
-    // lv_obj_set_style_radius(btn, LV_RADIUS_CIRCLE, 0);
+    // lv_obj_set_style_radius(btn_scr, LV_RADIUS_CIRCLE, 0);
     lv_obj_center(btn);
     lv_obj_add_event_cb(btn, btn_event_cb, LV_EVENT_ALL, NULL);           /*Assign a callback to the button*/
 
     lv_obj_t * label = lv_label_create(btn);          /*Add a label to the button*/
     lv_label_set_text(label, "Btn");                     /*Set the labels text*/
     lv_obj_center(label);
+
+    return btn_scr;
 }
 
+void gui_btnEnter() {}
+
+void gui_btnExit() {}
+
+void gui_btnDestory() {}
+
+ScrRegister(btn, scr_mgr_id_btn);
+//------------------------------------------------------------------------------
+lv_obj_t *scroll_scr;
 
 static void scroll_event_cb(lv_event_t * e)
 {
@@ -345,12 +357,12 @@ static void scroll_event_cb(lv_event_t * e)
     }
 }
 
-/**
- * Translate the object as they scroll
- */
-void lv_scroll_6(void)
+lv_obj_t *gui_scrollCreate(lv_obj_t *parent)
 {
-    lv_obj_t * cont = lv_obj_create(lv_scr_act());
+    scroll_scr = lv_obj_create(parent);
+    lv_obj_set_size(scroll_scr, lv_pct(100), lv_pct(100));
+
+    lv_obj_t * cont = lv_obj_create(scroll_scr);
     lv_obj_set_size(cont, 160, 160);
     lv_obj_center(cont);
     lv_obj_set_flex_flow(cont, LV_FLEX_FLOW_COLUMN);
@@ -375,13 +387,67 @@ void lv_scroll_6(void)
 
     /*Be sure the fist button is in the middle*/
     lv_obj_scroll_to_view(lv_obj_get_child(cont, 0), LV_ANIM_OFF);
+
+    return scroll_scr;
+}
+
+void gui_scrollEnter() {}
+
+void gui_scrollExit() {}
+
+void gui_scrollDestory() {}
+
+ScrRegister(scroll, scr_mgr_id_scroll);
+//------------------------------------------------------------------------------
+
+void indev_get_gesture_dir(lv_timer_t *t)
+{
+    lv_indev_data_t data;
+    lv_indev_t * indev_pointer = lv_indev_get_next(NULL);
+    lv_dir_t dir = lv_indev_get_gesture_dir(indev_pointer);
+    static lv_dir_t curr_dir = LV_DIR_NONE;
+    static int test_id = 0;
+
+    _lv_indev_read(indev_pointer, &data);
+
+    if(data.state == LV_INDEV_STATE_PR){
+        curr_dir = dir;
+    }else{
+        switch (curr_dir)
+        {
+            case LV_DIR_LEFT: 
+                Serial.println("scroll left\n");
+                test_id++;
+                if(test_id < scr_mgr_id_max)
+                    ScrMgrPushScr(test_id % scr_mgr_id_max, true);
+                break;
+            case LV_DIR_RIGHT: 
+                Serial.println("scroll right\n");
+                if(ScrMgrPopScr(true)){
+                    test_id--;
+                }   
+                break;
+            case LV_DIR_TOP:
+                Serial.println("scroll top\n");
+                break;
+            case LV_DIR_BOTTOM:
+                Serial.println("scroll bottom\n");
+                break;
+            default:
+                break;
+        }
+        curr_dir = LV_DIR_NONE;
+        dir = LV_DIR_NONE;
+    }
 }
 
 void ui_entry(void)
 {
 
-    ui_btn();
+    // ui_btn();
     // lv_scroll_6();
-    // ScrMgrInit();
-    // ScrMgrSwitchScr(scr_mgr_id_main, true);
+
+    ScrMgrInit();
+    ScrMgrSwitchScr(scr_mgr_id_main, true);
+    lv_timer_create(indev_get_gesture_dir, 20, NULL);
 }
