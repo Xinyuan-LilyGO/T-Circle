@@ -4,18 +4,9 @@
 #include "lvgl_scr_mgr.h"
 #include <TouchDrvCSTXXX.hpp>
 // #include <lv_demos.h>
+#include "utilities.h"
 
-#define BOARD_I2C_SDA       5
-#define BOARD_I2C_SCL       6
-#define BOARD_TOUCH_RST     15
-#define BOARD_TOUCH_IRQ     7
-
-#define SCR_ROTATION_0   0
-#define SCR_ROTATION_90  1
-#define SCR_ROTATION_180 2
-#define SCR_ROTATION_270 3
-
-int ui_rotation;
+int ui_rotation = SCR_ROTATION_0;
 
 static const uint16_t screenWidth = 160;
 static const uint16_t screenHeight = 160;
@@ -46,20 +37,20 @@ static void lv_touchpad_read(lv_indev_drv_t *indev_driver, lv_indev_data_t *data
     if (touched) {
         data->state = LV_INDEV_STATE_PR;
         if(ui_rotation == SCR_ROTATION_0){
-            data->point.x = lv_map(x[0], 0, 350, 0, 160);
-            data->point.y = lv_map(y[0], 0, 350, 0, 160);
+            data->point.x = lv_map(x[0], 0, 350, 0, TFT_WIDTH);
+            data->point.y = lv_map(y[0], 0, 350, 0, TFT_HEIGHT);
         } 
         else if(ui_rotation == SCR_ROTATION_90){
-            data->point.x = y[0];
-            data->point.y = TFT_WIDTH - x[0];
+            data->point.x = lv_map(y[0], 0, 350, 0, TFT_WIDTH);;
+            data->point.y = TFT_WIDTH - lv_map(x[0], 0, 350, 0, TFT_WIDTH);
         }
         else if(ui_rotation == SCR_ROTATION_180){
-            data->point.x = TFT_WIDTH - x[0];
-            data->point.y = TFT_HEIGHT - y[0];
+            data->point.x = TFT_WIDTH - lv_map(x[0], 0, 350, 0, TFT_WIDTH);
+            data->point.y = TFT_HEIGHT - lv_map(y[0], 0, 350, 0, TFT_HEIGHT);
         }
         else if(ui_rotation == SCR_ROTATION_270) {
-            data->point.x = TFT_HEIGHT - y[0];
-            data->point.y = x[0];
+            data->point.x = TFT_HEIGHT - lv_map(y[0], 0, 350, 0, TFT_WIDTH);
+            data->point.y = lv_map(x[0], 0, 350, 0, TFT_WIDTH);;
         }
         Serial.print("x=");Serial.print(data->point.x);
         Serial.print(", y=");Serial.println(data->point.y);
@@ -68,12 +59,21 @@ static void lv_touchpad_read(lv_indev_drv_t *indev_driver, lv_indev_data_t *data
     }
 }
 
+void touch_sleep(void)
+{
+    touch.sleep();
+}
+
+void touch_wakeup(void)
+{
+    touch.wakeup();
+}
+
 void setup()
 {
   
   Serial.begin(115200);
-
-  delay(3000);
+  // delay(3000);
 
   String LVGL_Arduino = "Hello Arduino! ";
   LVGL_Arduino += String('V') + lv_version_major() + "." + lv_version_minor() + "." + lv_version_patch();
@@ -82,7 +82,7 @@ void setup()
   printf("I am LVGL_Arduino");
 
   tft.begin();        /* TFT init */
-  // tft.setRotation(0); /* Landscape orientation, flipped */
+  tft.setRotation(ui_rotation); /* Landscape orientation, flipped */
   // tft.setSwapBytes(false);
   // tft.fillScreen(TFT_WHITE); 
 

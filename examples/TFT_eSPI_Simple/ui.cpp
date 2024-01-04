@@ -195,17 +195,47 @@ ScrRegister(clock2, scr_mgr_id_clock2);
 /**
  * A clock from a meter
  */
+extern void touch_sleep(void);
+extern void touch_wakeup(void);
+
+static void touch_text_timer(lv_timer_t *t)
+{
+    static int sec = 0;
+    static bool dir = false;
+
+    sec++;
+
+    if(sec >= 10){
+        if(dir){
+            touch_wakeup();
+            Serial.println("touch_wakeup!");
+        }else{
+            touch_sleep();
+            Serial.println("touch_sleep!");
+        }
+        sec = 0;
+        dir = !dir;
+    }
+    Serial.println(sec);
+}
+
 static void btn_event_cb(lv_event_t * e)
 {
+    static bool flag = false;
     lv_event_code_t code = lv_event_get_code(e);
     lv_obj_t * btn = lv_event_get_target(e);
     if(code == LV_EVENT_CLICKED) {
         static uint8_t cnt = 0;
         cnt++;
-
         /*Get the first child of the button which is the label and change its text*/
         lv_obj_t * label = lv_obj_get_child(btn, 0);
-        lv_label_set_text_fmt(label, "Button: %d", cnt);
+        lv_label_set_text_fmt(label, "Btn: %d", cnt);
+        // touch_sleep();
+        if(!flag){
+            lv_timer_create(touch_text_timer, 1000, NULL);
+            flag = true;
+        }
+        
     }
 }
 
@@ -265,7 +295,7 @@ void ui_btn(void)
     lv_obj_set_size(btn, 100, 100);
     // lv_obj_set_style_radius(btn, LV_RADIUS_CIRCLE, 0);
     lv_obj_center(btn);
-    // lv_obj_add_event_cb(btn, btn_event_cb, LV_EVENT_ALL, NULL);           /*Assign a callback to the button*/
+    lv_obj_add_event_cb(btn, btn_event_cb, LV_EVENT_ALL, NULL);           /*Assign a callback to the button*/
 
     lv_obj_t * label = lv_label_create(btn);          /*Add a label to the button*/
     lv_label_set_text(label, "Btn");                     /*Set the labels text*/
@@ -350,8 +380,8 @@ void lv_scroll_6(void)
 void ui_entry(void)
 {
 
-    // ui_btn();
-    lv_scroll_6();
+    ui_btn();
+    // lv_scroll_6();
     // ScrMgrInit();
     // ScrMgrSwitchScr(scr_mgr_id_main, true);
 }
