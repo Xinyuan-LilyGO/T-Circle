@@ -1,0 +1,1 @@
+SDI接RD*SCL接WR*CS接Db8*RS_a0接RS

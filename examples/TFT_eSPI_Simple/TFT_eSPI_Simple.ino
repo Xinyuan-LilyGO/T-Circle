@@ -6,10 +6,32 @@
 // #include <lv_demos.h>
 #include "utilities.h"
 
+bool UI_TOUCH_LINE_EN = 0;
 int ui_rotation = SCR_ROTATION_0;
 
 static const uint16_t screenWidth = 160;
 static const uint16_t screenHeight = 160;
+
+/**    PIN
+ * **************************** no touch
+ * BL_EN --- 18
+ * MOSI  --- 11
+ * CS    --- 10
+ * SCK   --- 12
+ * DC    --- 17
+ * **************************** touch
+ * LEDA  --- 18
+ * RESET --- 9
+ * RS    --- 17
+ * SDA   --- 11
+ * SCL   --- 12
+ * CS    --- 10
+ * 
+ * TP_RST --- 15
+ * TP_SCL --- 6
+ * TP_SDA --- 5
+ * TP_INT --- 7
+ */
 
 TFT_eSPI tft = TFT_eSPI(screenWidth, screenHeight); /* TFT instance */
 TouchDrvCSTXXX touch;
@@ -26,6 +48,32 @@ void my_disp_flush(lv_disp_drv_t *disp, const lv_area_t *area, lv_color_t *color
   tft.endWrite();
 
   lv_disp_flush_ready(disp);
+}
+
+static lv_point_t line_x_points[] = { {0, 0}, {0, 0} };
+static lv_point_t line_y_points[] = { {0, 0}, {0, 0} };
+lv_obj_t *line_x;
+lv_obj_t *line_y;
+void touch_line(lv_indev_data_t *data)
+{
+    if (data->state == true) {
+        // printf("x=%d\t y=%d\n", mouse_data.point.x, mouse_data.point.y);
+        line_x_points[0].x = data->point.x;
+        line_x_points[0].y = 0;
+        line_x_points[1].x = data->point.x;
+        line_x_points[1].y = screenWidth;
+        lv_line_set_points(line_x, line_x_points, 2);
+        line_y_points[0].x = 0;
+        line_y_points[0].y = data->point.y;
+        line_y_points[1].x = screenWidth;
+        line_y_points[1].y = data->point.y;
+        lv_line_set_points(line_y, line_y_points, 2);
+        lv_obj_clear_flag(line_x, LV_OBJ_FLAG_HIDDEN);
+        lv_obj_clear_flag(line_y, LV_OBJ_FLAG_HIDDEN);
+    } else {
+        lv_obj_add_flag(line_x, LV_OBJ_FLAG_HIDDEN);
+        lv_obj_add_flag(line_y, LV_OBJ_FLAG_HIDDEN);
+    }
 }
 
 static void lv_touchpad_read(lv_indev_drv_t *indev_driver, lv_indev_data_t *data)
@@ -55,6 +103,8 @@ static void lv_touchpad_read(lv_indev_drv_t *indev_driver, lv_indev_data_t *data
     } else {
         data->state = LV_INDEV_STATE_REL;
     }
+    if(UI_TOUCH_LINE_EN == 1)
+    touch_line(data);
 }
 
 void touch_sleep(void)
@@ -96,9 +146,9 @@ void setup()
 
   static lv_disp_draw_buf_t draw_buf;
   static lv_color_t buf1[screenWidth * screenHeight];
-  static lv_color_t buf2[screenWidth * screenHeight];
+//   static lv_color_t buf2[screenWidth * screenHeight];
 
-  lv_disp_draw_buf_init(&draw_buf, buf1, buf2, screenWidth * screenHeight);
+  lv_disp_draw_buf_init(&draw_buf, buf1, NULL, screenWidth * screenHeight);
   /*Initialize the display*/
   static lv_disp_drv_t disp_drv;
   lv_disp_drv_init(&disp_drv);
@@ -115,7 +165,26 @@ void setup()
   indev_drv.read_cb = lv_touchpad_read;
   lv_indev_drv_register(&indev_drv);
 
+  static lv_style_t style_line;
+    lv_style_init(&style_line);
+    lv_style_set_line_width(&style_line, 1);
+    lv_style_set_line_color(&style_line, lv_palette_main(LV_PALETTE_RED));
+    lv_style_set_line_rounded(&style_line, false);
+
+    /*Create a line and apply the new style*/
+    line_x = lv_line_create(lv_layer_top());
+    // lv_line_set_points(line_x, line_x_points, 2);     /*Set the points*/
+    lv_obj_add_style(line_x, &style_line, 0);
+
+    line_y = lv_line_create(lv_layer_top());
+    // lv_line_set_points(line_x, line_x_points, 2);     /*Set the points*/
+    lv_obj_add_style(line_y, &style_line, 0);
+    lv_obj_add_flag(line_x, LV_OBJ_FLAG_HIDDEN);
+    lv_obj_add_flag(line_y, LV_OBJ_FLAG_HIDDEN);
+
   ui_entry();
+
+  UI_TOUCH_LINE_EN = 1;
 }
 
 unsigned long previousMillis = 0;

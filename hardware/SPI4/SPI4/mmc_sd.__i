@@ -1,0 +1,1 @@
+"mmc_sd\mmc_sd.c" OPTIMIZE (8,SPEED) BROWSE DEBUG OBJECTEXTEND PRINT(.\mmc_sd.lst) TABS (2) OBJECT(mmc_sd.obj)

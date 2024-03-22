@@ -1,0 +1,569 @@
+C51 COMPILER V9.60.7.0   MAIN                                                              11/09/2023 15:04:40 PAGE 1   
+
+
+C51 COMPILER V9.60.7.0, COMPILATION OF MODULE MAIN
+OBJECT MODULE PLACED IN main.OBJ
+COMPILER INVOKED BY: C:\Keil_v5\C51\BIN\C51.EXE main.c OPTIMIZE(8,SPEED) BROWSE DEBUG OBJECTEXTEND TABS(2)
+
+line level    source
+
+   1          #include "c8051F340.h"
+   2          #include <intrins.h>
+   3          #include <absacc.h>
+   4          #include <stdlib.h>
+   5          
+   6          #include <main.h>
+   7          #include <usb_api.h>
+   8          #include <mmc_sd\mmc_sd.h>
+   9          #include <lcd\lcd.h>
+  10          #include <tp\tp.h>
+  11          
+  12          xdata unsigned char Packet[64];   // Last packet received from host 
+  13          unsigned char f_down=0;
+  14          unsigned char f_debug=0;
+  15          unsigned char f_read=0;
+  16          unsigned char f_para=0;
+  17          unsigned char f_init=0;
+  18          unsigned char f_other=0;
+  19          unsigned char pic=0;
+  20          unsigned int  bf=0;
+  21          unsigned long int sd=1;
+  22          
+  23          unsigned char VerifyCode0=0xaa;
+  24          unsigned char VerifyCode1=0x55;
+  25          unsigned char VerifyCode2=0xff;
+  26          
+  27          /********************************************************************************/
+  28          code const UINT USB_VID = 0x10C4;
+  29          code const UINT USB_PID = 0xEA61;
+  30          code const BYTE USB_MfrStr[] = {0x1A,0x03,'S',0,'i',0,'l',0,'i',0,'c',0,'o',0,'n',0,' ',0,'L',0,'a',0,'b',
+             -0,'s',0};                       // Manufacturer String
+  31          code const BYTE USB_ProductStr[] = {0x10,0x03,'U',0,'S',0,'B',0,' ',0,'A',0,'P',0,'I',0}; // Product Desc.
+             - String
+  32          code const BYTE USB_SerialStr[] = {0x0a,0x03,'C',0,'5',0,'1',0,'F',0};
+  33          code const BYTE USB_MaxPower = 15;            // Max current = 30 mA (15 * 2)
+  34          code const BYTE USB_PwAttributes = 0x80;      // Bus-powered, remote wakeup not supported
+  35          code const UINT USB_bcdDevice = 0x0100;       // Device release number 1.00
+  36          
+  37          
+  38          
+  39          /***************************************************************/
+  40          void main(void)
+  41          {
+  42   1      #ifdef SD_DEMO_PIC
+  43   1        unsigned char n;
+  44   1        #endif
+  45   1        Devices_Init();
+  46   1      
+  47   1        #ifdef USE_SD_INIT
+  48   1        SD_Init(); 
+  49   1        Delay(10);
+  50   1        #endif 
+  51   1      
+  52   1        
+  53   1        while(1)   
+C51 COMPILER V9.60.7.0   MAIN                                                              11/09/2023 15:04:40 PAGE 2   
+
+  54   1        {
+  55   2          
+  56   2      
+  57   2          DispFrame();
+  58   2            WaitKey();Delay(200);
+  59   2            DispColor(WHITE);
+  60   2            WaitKey();Delay(200);
+  61   2      
+  62   2          DispColor(RED);
+  63   2            WaitKey();Delay(200);
+  64   2        
+  65   2          DispColor(GREEN);
+  66   2            WaitKey();Delay(200);
+  67   2        
+  68   2          DispColor(BLUE);
+  69   2            WaitKey();Delay(200);
+  70   2            
+  71   2          DispColor(BLACK);
+  72   2            WaitKey();Delay(200);
+  73   2        
+  74   2      
+  75   2            
+  76   2              DispGrayHor32();
+  77   2        
+  78   2              WaitKey();Delay(200);
+  79   2         
+  80   2      
+  81   2          #ifdef SD_PIC_DEMO_MODE
+  82   2            for(n=0;n<3;n++)
+  83   2            {
+  84   3              DispPicFromSD(n);
+  85   3              Delay(100);
+  86   3              WaitKey();
+  87   3            }
+  88   2      //      break;
+  89   2          #endif     
+  90   2        }
+  91   1      }
+  92          
+  93          
+  94          
+  95          
+  96          
+  97          
+  98          
+  99          //----------------------------------------------------------------------
+ 100          void Delay(unsigned int dly)
+ 101          {
+ 102   1          unsigned int i,j;
+ 103   1      
+ 104   1          for(i=0;i<dly;i++)
+ 105   1            for(j=0;j<255;j++);
+ 106   1      }
+ 107          
+ 108               void StopDelay(unsigned int sdly)
+ 109          {
+ 110   1          unsigned int i,j,k;
+ 111   1        for(k=0;k<100;k++)
+ 112   1        {
+ 113   2        if(KEY_Stop)
+ 114   2          {
+ 115   3          for(i=0;i<sdly;i++)
+C51 COMPILER V9.60.7.0   MAIN                                                              11/09/2023 15:04:40 PAGE 3   
+
+ 116   3            for(j=0;j<255;j++);
+ 117   3          }
+ 118   2          else
+ 119   2          {
+ 120   3            WaitKey();Delay(20);
+ 121   3          } 
+ 122   2        }
+ 123   1      }
+ 124          #ifdef AUTO_NEXT
+              void WaitKey(void)
+              {  
+                uint32 i;
+              
+                for(i=0;i<500;i++)
+                {
+                  Delay(200);
+                  if(KEY_STEP)
+                  {
+                    #ifdef CONN_USB
+                    ConnToUSB();
+                    #endif  
+                  }
+                  else 
+                  {
+                    break;
+                    //return;
+                  }
+                  Delay(200);
+                } 
+              }
+              #endif
+ 147          
+ 148          #ifdef MANUA_NEXT
+ 149          void WaitKey(void)
+ 150          {  
+ 151   1        while(KEY_STEP)
+ 152   1        {
+ 153   2          #ifdef CONN_USB
+ 154   2          ConnToUSB();
+ 155   2          #endif
+ 156   2        }
+ 157   1          
+ 158   1        Delay(500);
+ 159   1        while(!KEY_STEP);
+ 160   1      
+ 161   1      }
+ 162          #endif
+ 163          
+ 164          //f_debug
+ 165          //0     1      2        3            ，    4         5     6         7
+ 166          //0xaa  0x55  0xff   是否显示在LCD      指令或数据  dataH    dataL   显示的水平位置
+ 167          
+ 168          //f_read
+ 169          //0     1      2        3            ，    4         5     6        7          8
+ 170          //0xff  0x55  0xaa   是否显示在LCD      是否有效    dataH    dataL   读参数的次数    显示的水平位置
+ 171          //reg_data[]={dataH,dataL,dataH,dataL,dataH,dataL...  } 
+ 172          
+ 173          //f_down
+ 174          //0     1      2        3            ，    4      5    6        7    ...  35       36
+ 175          //0xaa  0xff  0x55   是否写入SD卡       dataH,   dataL, dataH,   dataL,  ... dataH  dataL
+ 176          
+ 177          //f_init
+C51 COMPILER V9.60.7.0   MAIN                                                              11/09/2023 15:04:40 PAGE 4   
+
+ 178          //0     1      2        3    ，            4      5    6        7    ...  35       36
+ 179          //0xff  0xaa  0x55      -               指令或数据  dataH  dataL      -   
+ 180            
+ 181          #ifdef CONN_USB
+ 182          void ConnToUSB(void)
+ 183          {
+ 184   1        unsigned char i;
+ 185   1        xdata unsigned char reg_data[24];   
+ 186   1        xdata unsigned char para_data[64]; 
+ 187   1        unsigned char dat;
+ 188   1        unsigned int  reg_index;
+ 189   1        unsigned char data_num;
+ 190   1        unsigned char st[1]={1};
+ 191   1        
+ 192   1        //DispStr("DEBUG FOR USB",0,0,BLACK,WHITE);
+ 193   1        while(f_debug)
+ 194   1        {
+ 195   2           for(i=1;i<16;i++)
+ 196   2           {
+ 197   3               if(Packet[i*4]==0x00)
+ 198   3             {
+ 199   4                WriteComm((Packet[i*4+1]<<8)|Packet[i*4+2]);  
+ 200   4             }
+ 201   3             else if(Packet[i*4]==0x01)
+ 202   3             {
+ 203   4                WriteData((Packet[i*4+1]<<8)|Packet[i*4+2]);
+ 204   4        
+ 205   4             }
+ 206   3             else if(Packet[i*4]==0x80)
+ 207   3             {
+ 208   4                //  
+ 209   4             }
+ 210   3           } 
+ 211   2           _nop_();_nop_();_nop_();_nop_(); _nop_();_nop_();_nop_();_nop_();_nop_();_nop_();
+ 212   2           _nop_();_nop_();_nop_();_nop_(); _nop_();_nop_();_nop_();_nop_();_nop_();_nop_();
+ 213   2      
+ 214   2           DispStr("USB DEBUG",0,0,BLACK,WHITE);
+ 215   2      
+ 216   2           if((Packet[3])&0x01)
+ 217   2           {
+ 218   3             for(i=1;i<16;i++)
+ 219   3             {
+ 220   4                 if(Packet[i*4]==0x00)
+ 221   4               {  
+ 222   5                DispInt((Packet[i*4+1]<<8)|Packet[i*4+2],(FONT_W*4+4)*Packet[i*4+3],(FONT_H+1)*i,GREEN,BLACK);  
+ 223   5               }
+ 224   4               else if(Packet[i*4]==0x01)
+ 225   4               {
+ 226   5                DispInt((Packet[i*4+1]<<8)|Packet[i*4+2],(FONT_W*4+4)*Packet[i*4+3],(FONT_H+1)*i,BLUE,WHITE);     
+ 227   5               }
+ 228   4               else if(Packet[i*4]==0x80)
+ 229   4               {
+ 230   5                  //  
+ 231   5               }
+ 232   4             } 
+ 233   3           }
+ 234   2           _nop_();_nop_();_nop_();_nop_(); _nop_();_nop_();_nop_();_nop_();_nop_();_nop_();
+ 235   2           _nop_();_nop_();_nop_();_nop_(); _nop_();_nop_();_nop_();_nop_();_nop_();_nop_();
+ 236   2      
+ 237   2           f_debug=0;  
+ 238   2         }
+ 239   1      
+C51 COMPILER V9.60.7.0   MAIN                                                              11/09/2023 15:04:40 PAGE 5   
+
+ 240   1      
+ 241   1        //////////////////////////////////////////////////////
+ 242   1        while(f_other)
+ 243   1        { 
+ 244   2             for(i=0;i<64;i+=2)
+ 245   2             {
+ 246   3             CS0=0;
+ 247   3             //RD0=1;
+ 248   3             RS=1;
+ 249   3               WriteDispData(Packet[i], Packet[i+1]);    
+ 250   3             CS0=1;
+ 251   3      
+ 252   3               buffer[bf++]=Packet[i];
+ 253   3               buffer[bf++]=Packet[i+1];
+ 254   3             if(bf==512)
+ 255   3                 {      
+ 256   4                     MMC_SD_WriteSingleBlock(sd++); 
+ 257   4               buffer[0]=pic;
+ 258   4                   MMC_SD_WriteSingleBlock(0);      //统计图片数量  buffer[0]=pi
+ 259   4                   bf=0;
+ 260   4                 }
+ 261   3             } 
+ 262   2      
+ 263   2           f_other=0;  
+ 264   2             Block_Write(st, 1);
+ 265   2          }
+ 266   1      
+ 267   1        //////////////////////////////////////////////////////
+ 268   1        while(f_down)
+ 269   1        {
+ 270   2          if(Packet[3]&&0x01) //download to sd
+ 271   2          { 
+ 272   3               for(i=4;i<36;i+=2)
+ 273   3               {
+ 274   4               CS0=0;
+ 275   4               //RD0=1;
+ 276   4               RS=1;
+ 277   4                 WriteDispData(Packet[i], Packet[i+1]);    
+ 278   4               CS0=1;
+ 279   4      
+ 280   4               buffer[bf++]=Packet[i];
+ 281   4                 buffer[bf++]=Packet[i+1];
+ 282   4        
+ 283   4               if(bf==512)
+ 284   4                   {      
+ 285   5                       MMC_SD_WriteSingleBlock(sd++); 
+ 286   5                 buffer[0]=pic;
+ 287   5                     MMC_SD_WriteSingleBlock(0);      
+ 288   5                     bf=0;
+ 289   5                   }
+ 290   4        
+ 291   4               } 
+ 292   3             f_down=0; 
+ 293   3             Block_Write(st, 1);
+ 294   3      
+ 295   3           }
+ 296   2           else
+ 297   2           {
+ 298   3               for(i=4;i<36;i+=2)
+ 299   3               {
+ 300   4               CS0=0;
+ 301   4               //RD0=1;
+C51 COMPILER V9.60.7.0   MAIN                                                              11/09/2023 15:04:40 PAGE 6   
+
+ 302   4               RS=1;
+ 303   4                 WriteDispData(Packet[i], Packet[i+1]);    
+ 304   4               CS0=1;
+ 305   4        
+ 306   4               } 
+ 307   3             f_down=0; 
+ 308   3             Block_Write(st, 1);
+ 309   3           }
+ 310   2          }
+ 311   1      
+ 312   1          //////////////////////////////////////////////////////
+ 313   1        while(f_init)
+ 314   1        {
+ 315   2             for(i=4;i<36;i+=4)
+ 316   2             {
+ 317   3               if(Packet[i]==0x00)
+ 318   3             {
+ 319   4                WriteComm((Packet[i+1]<<8)|Packet[i+2]);  
+ 320   4             }
+ 321   3             else if(Packet[i]==0x01)
+ 322   3             {
+ 323   4                WriteData((Packet[i+1]<<8)|Packet[i+2]);  
+ 324   4             }
+ 325   3             else if(Packet[i]==0x10)
+ 326   3             {
+ 327   4              //Delay(Packet[i+1]); 
+ 328   4              //Delay(Packet[i+2]); 
+ 329   4              _nop_();_nop_();_nop_();_nop_(); _nop_();_nop_();_nop_();_nop_();_nop_();_nop_();
+ 330   4              _nop_();_nop_();_nop_();_nop_(); _nop_();_nop_();_nop_();_nop_();_nop_();_nop_();
+ 331   4             }
+ 332   3             else if(Packet[i]==0x80)
+ 333   3             {
+ 334   4                //
+ 335   4             }
+ 336   3             } 
+ 337   2           f_init=0;
+ 338   2           Block_Write(st, 1);
+ 339   2        }
+ 340   1      
+ 341   1        //////////////////////////////////////////////////////
+ 342   1        while(f_read)
+ 343   1        {
+ 344   2          for(i=0;i<24;i++)
+ 345   2            reg_data[i]=0x00; 
+ 346   2      
+ 347   2          data_num = Packet[7]*2; 
+ 348   2          reg_index=(Packet[5]<<8)|Packet[6];
+ 349   2            
+ 350   2          if(Packet[4]==0x01)
+ 351   2          {
+ 352   3            WriteComm(reg_index);
+ 353   3            for(i=0;i<data_num;i=i+2)
+ 354   3            {
+ 355   4              dat=ReadData();
+ 356   4              reg_data[i]=dat>>8;
+ 357   4              reg_data[i+1]=dat;
+ 358   4            }
+ 359   3          }
+ 360   2      
+ 361   2          f_read=0;  
+ 362   2          Block_Write(reg_data,data_num);
+ 363   2      
+C51 COMPILER V9.60.7.0   MAIN                                                              11/09/2023 15:04:40 PAGE 7   
+
+ 364   2          Delay(100);
+ 365   2          DispStr("USB READ",0,0,BLACK,WHITE);
+ 366   2          if((Packet[3])&0x01)
+ 367   2          {
+ 368   3            DispInt(reg_index,(FONT_W*4+4)*(Packet[8]),FONT_H+1,GREEN,BLACK);
+ 369   3            for(i=0;i<data_num;i=i+2)
+ 370   3            {
+ 371   4              DispInt((reg_data[i]<<8)|reg_data[i+1],(FONT_W*4+4)*(Packet[8]),(FONT_H+1)*(i/2+2),BLUE,WHITE);     
+ 372   4            }
+ 373   3          }
+ 374   2          }
+ 375   1      
+ 376   1        //////////////////////////////////////////////////////
+ 377   1        while(f_para)
+ 378   1        {
+ 379   2          for(i=0;i<64;i++)
+ 380   2            para_data[i]=0x00;  
+ 381   2      
+ 382   2          para_data[0]=((unsigned int)ROW)>>8;
+ 383   2          para_data[1]= (unsigned int)ROW;
+ 384   2          para_data[2]=((unsigned int)COL)>>8;
+ 385   2          para_data[3]=((unsigned int)COL);
+ 386   2      
+ 387   2          f_para=0;  
+ 388   2          Block_Write(para_data,64);
+ 389   2          }
+ 390   1      }
+ 391          #endif
+ 392          
+ 393          
+ 394          void  MCU_Init(void)
+ 395          {
+ 396   1          unsigned char n;
+ 397   1        PCA0MD &= ~0x40;
+ 398   1      
+ 399   1        //OSC
+ 400   1          OSCICN = 0x83;    //Internal oscillator enabled, SYSCLK = Internal Oscillator = 12MHz
+ 401   1          CLKMUL = 0x00;    //Select internal oscillator as clock multiplier source clock
+ 402   1      
+ 403   1          CLKMUL |= 0x80;   //Enable clock multiplier
+ 404   1      
+ 405   1        for(n=0;n<255;n++);
+ 406   1      
+ 407   1        CLKMUL |= 0xC0;           //Initialize the clock multiplier
+ 408   1        while(!(CLKMUL & 0x20));  //Wait for multiplier to lock
+ 409   1          CLKSEL = 0x00;            //Change SYSCLK to (4x Multiplier    ) = 48MHz  (48MHz is as fast as F34 wil
+             -l run); 0x03;
+ 410   1         
+ 411   1          RSTSRC   |= 0x02;  
+ 412   1      
+ 413   1        //P0~P4          //set high impedance , skipped by crossbar
+ 414   1        P0MDIN |= 0xFF;          //数字输入(无模拟输入）
+ 415   1        P0MDOUT |= 0xFF;     //推挽输出（可选开漏输出，输出设为推挽，输入设为开漏）
+ 416   1      
+ 417   1          P1MDOUT |= 0xFF;         
+ 418   1          P1MDIN |= 0xFF; 
+ 419   1      
+ 420   1          P2MDOUT |= 0xFF;        
+ 421   1        P4MDOUT |= 0xFF;         
+ 422   1      
+ 423   1        P3MDIN |= 0xFF;
+ 424   1        P3MDOUT |= 0x17;     //0001 0111
+C51 COMPILER V9.60.7.0   MAIN                                                              11/09/2023 15:04:40 PAGE 8   
+
+ 425   1      
+ 426   1         OE=0;
+ 427   1           DIR=0;
+ 428   1      
+ 429   1        //TP_PENIRQ = 1;
+ 430   1        //TP_DOUT = 1;
+ 431   1      
+ 432   1          XBR0     |= 0x02;
+ 433   1          XBR1     |= 0x40;       // Enable Crossbar
+ 434   1      
+ 435   1      }
+ 436          
+ 437          void Devices_Init(void)
+ 438          {
+ 439   1          //MCU
+ 440   1        MCU_Init();
+ 441   1      
+ 442   1        //USB
+ 443   1        USB_Clock_Start();                     // Init USB clock *before* calling USB_Init
+ 444   1          USB_Init(USB_VID,USB_PID,USB_MfrStr,USB_ProductStr,USB_SerialStr,USB_MaxPower,USB_PwAttributes,USB_bcd
+             -Device);
+ 445   1          USB_Int_Enable();
+ 446   1      
+ 447   1        //SPI
+ 448   1        SPI0CFG   = 0x70;
+ 449   1          SPI0CN    = 0x0f;
+ 450   1      
+ 451   1        //SD
+ 452   1        #ifdef USE_SD_INIT
+ 453   1          SD_Init();
+ 454   1        #endif
+ 455   1      
+ 456   1        //LCM
+ 457   1          LCD_Init();
+ 458   1      
+ 459   1      }
+ 460          
+ 461          void Suspend_Device(void)
+ 462          {
+ 463   1         USB_Suspend();
+ 464   1      }
+ 465          
+ 466          //----------------------------------------------------------------------
+ 467          void  USB_API_TEST_ISR(void) interrupt 17
+ 468          {
+ 469   1         unsigned char INTVAL = Get_Interrupt_Source();
+ 470   1      
+ 471   1         if (INTVAL & RX_COMPLETE)
+ 472   1         {
+ 473   2           Block_Read(Packet,64);
+ 474   2      
+ 475   2           if(Packet[0]==VerifyCode0 && Packet[1]==VerifyCode1 && Packet[2]==VerifyCode2) 
+ 476   2           {  
+ 477   3              f_debug=1;
+ 478   3           }
+ 479   2           else if(Packet[0]==VerifyCode2 && Packet[1]==VerifyCode1 && Packet[2]==VerifyCode0)
+ 480   2           {
+ 481   3              f_read=1;
+ 482   3           }
+ 483   2           else if(Packet[0]==VerifyCode1 && Packet[1]==VerifyCode0 && Packet[2]==VerifyCode2)
+ 484   2           {
+ 485   3              f_para=1;
+C51 COMPILER V9.60.7.0   MAIN                                                              11/09/2023 15:04:40 PAGE 9   
+
+ 486   3           }
+ 487   2           else if(Packet[0]==VerifyCode0 && Packet[1]==VerifyCode2 && Packet[2]==VerifyCode1)
+ 488   2           {
+ 489   3              f_down=1;
+ 490   3           }
+ 491   2           else if(Packet[0]==VerifyCode2 && Packet[1]==VerifyCode0 && Packet[2]==VerifyCode1)
+ 492   2           {
+ 493   3              f_init=1;
+ 494   3           }
+ 495   2           else 
+ 496   2           {
+ 497   3              f_other=1;
+ 498   3           }
+ 499   2         }
+ 500   1      
+ 501   1         if (INTVAL & TX_COMPLETE)
+ 502   1         {         
+ 503   2          
+ 504   2         }
+ 505   1            
+ 506   1         if (INTVAL & DEV_SUSPEND)
+ 507   1         {
+ 508   2              Suspend_Device();
+ 509   2         }
+ 510   1      
+ 511   1         if (INTVAL & DEV_CONFIGURED)
+ 512   1         {
+ 513   2             MCU_Init();
+ 514   2         }
+ 515   1      
+ 516   1         if (INTVAL & DEVICE_OPEN)
+ 517   1         {
+ 518   2             BlockWrite(0,COL-1,0,ROW-1);
+ 519   2         }
+ 520   1      
+ 521   1         if (INTVAL & DEVICE_CLOSE)
+ 522   1         {
+ 523   2             pic=pic+1;
+ 524   2             BlockWrite(0,COL-1,0,ROW-1);
+ 525   2         }
+ 526   1      }
+
+
+MODULE INFORMATION:   STATIC OVERLAYABLE
+   CODE SIZE        =   2141    ----
+   CONSTANT SIZE    =     80    ----
+   XDATA SIZE       =     64      88
+   PDATA SIZE       =   ----    ----
+   DATA SIZE        =     16      11
+   IDATA SIZE       =   ----    ----
+   BIT SIZE         =   ----    ----
+END OF MODULE INFORMATION.
+
+
+C51 COMPILATION COMPLETE.  0 WARNING(S),  0 ERROR(S)
