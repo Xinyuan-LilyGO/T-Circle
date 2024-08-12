@@ -82,24 +82,28 @@ static void lv_touchpad_read(lv_indev_drv_t *indev_driver, lv_indev_data_t *data
     uint8_t touched = touch.getPoint(x, y, touch.getSupportTouchPoint());
     if (touched) {
         data->state = LV_INDEV_STATE_PR;
-        if(ui_rotation == SCR_ROTATION_0){
-            data->point.x = lv_map(x[0], 0, 350, 0, TFT_WIDTH);
-            data->point.y = lv_map(y[0], 0, 350, 0, TFT_HEIGHT);
-        } 
-        else if(ui_rotation == SCR_ROTATION_90){
-            data->point.x = lv_map(y[0], 0, 350, 0, TFT_WIDTH);;
-            data->point.y = TFT_WIDTH - lv_map(x[0], 0, 350, 0, TFT_WIDTH);
-        }
-        else if(ui_rotation == SCR_ROTATION_180){
-            data->point.x = TFT_WIDTH - lv_map(x[0], 0, 350, 0, TFT_WIDTH);
-            data->point.y = TFT_HEIGHT - lv_map(y[0], 0, 350, 0, TFT_HEIGHT);
-        }
-        else if(ui_rotation == SCR_ROTATION_270) {
-            data->point.x = TFT_HEIGHT - lv_map(y[0], 0, 350, 0, TFT_WIDTH);
-            data->point.y = lv_map(x[0], 0, 350, 0, TFT_WIDTH);;
-        }
-        Serial.print("x=");Serial.print(data->point.x);
-        Serial.print(", y=");Serial.println(data->point.y);
+        // if(ui_rotation == SCR_ROTATION_0){
+        //     data->point.x = lv_map(x[0], 0, 350, 0, TFT_WIDTH);
+        //     data->point.y = lv_map(y[0], 0, 350, 0, TFT_HEIGHT);
+        // } 
+        // else if(ui_rotation == SCR_ROTATION_90){
+        //     data->point.x = lv_map(y[0], 0, 350, 0, TFT_WIDTH);;
+        //     data->point.y = TFT_WIDTH - lv_map(x[0], 0, 350, 0, TFT_WIDTH);
+        // }
+        // else if(ui_rotation == SCR_ROTATION_180){
+        //     data->point.x = TFT_WIDTH - lv_map(x[0], 0, 350, 0, TFT_WIDTH);
+        //     data->point.y = TFT_HEIGHT - lv_map(y[0], 0, 350, 0, TFT_HEIGHT);
+        // }
+        // else if(ui_rotation == SCR_ROTATION_270) {
+        //     data->point.x = TFT_HEIGHT - lv_map(y[0], 0, 350, 0, TFT_WIDTH);
+        //     data->point.y = lv_map(x[0], 0, 350, 0, TFT_WIDTH);;
+        // }
+
+        data->point.x = x[0];
+        data->point.y = y[0];
+
+        Serial.print("x=");Serial.print(x[0]);
+        Serial.print(", y=");Serial.println(y[0]);
     } else {
         data->state = LV_INDEV_STATE_REL;
     }
@@ -121,7 +125,7 @@ void setup()
 {
   
   Serial.begin(115200);
-  // delay(3000);
+//   delay(2000);
 
   String LVGL_Arduino = "Hello Arduino! ";
   LVGL_Arduino += String('V') + lv_version_major() + "." + lv_version_minor() + "." + lv_version_patch();
@@ -131,8 +135,20 @@ void setup()
 
   tft.begin();        /* TFT init */
   tft.setRotation(ui_rotation); /* Landscape orientation, flipped */
-  // tft.setSwapBytes(false);
-  // tft.fillScreen(TFT_WHITE); 
+
+  // iic scan
+    byte error, address;
+    int nDevices = 0;
+    Serial.println("Scanning for I2C devices ...");
+    Wire.begin(BOARD_I2C_SDA, BOARD_I2C_SCL);
+    for(address = 0x01; address < 0x7F; address++){
+        Wire.beginTransmission(address);
+        error = Wire.endTransmission();
+        if(error == 0){ // 0: success.
+            nDevices++;
+            Serial.printf("I2C device found at address 0x%x\n", address);
+        }
+    }
 
   touch.setPins(BOARD_TOUCH_RST, BOARD_TOUCH_IRQ);
   bool hasTouch = touch.init(Wire, BOARD_I2C_SDA, BOARD_I2C_SCL, 0x15);

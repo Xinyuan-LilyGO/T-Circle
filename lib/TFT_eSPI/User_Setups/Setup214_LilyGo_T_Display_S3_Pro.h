@@ -14,13 +14,22 @@
 // #define TFT_INVERSION_ON
 // #define TFT_INVERSION_OFF
 
-#define TFT_MISO   13
-#define TFT_MOSI   11
-#define TFT_SCLK   12
-#define TFT_CS     10
-#define TFT_DC     17
-#define TFT_RST    9
-#define TFT_BL     18
+// #define TFT_MISO     13
+// #define TFT_MOSI     11
+// #define TFT_SCLK     12
+// #define TFT_CS       10
+// #define TFT_DC       42
+// #define TFT_RST      9
+// #define TFT_BL       41
+// #define TFT_BACKLIGHT_ON    HIGH
+
+#define TFT_MISO     -1
+#define TFT_MOSI     11
+#define TFT_SCLK     13
+#define TFT_CS       10
+#define TFT_DC       17
+#define TFT_RST      8
+#define TFT_BL       18
 #define TFT_BACKLIGHT_ON    HIGH
 
 
